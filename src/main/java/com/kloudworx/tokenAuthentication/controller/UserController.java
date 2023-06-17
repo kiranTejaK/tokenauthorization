@@ -2,6 +2,7 @@ package com.kloudworx.tokenAuthentication.controller;
 
 import com.kloudworx.tokenAuthentication.entity.UserCredentials;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.*;
@@ -13,24 +14,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 @RestController
 @RequestMapping("/api")
 public class UserController {
     private final JdbcTemplate jdbcTemplate;
 
+    @Value("${spring.datasource.url}")
+    private String dbUrl;
+
+    @Value("${spring.datasource.username}")
+    private String dbUsername;
+
+    @Value("${spring.datasource.password}")
+    private String dbPassword;
+
+    @Value("${spring.datasource.driver-class-name}")
+    private String dbDriverClassName;
+
     @Autowired
     public UserController(JdbcTemplate jdbcTemplate) {
+
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // UserCredentials Validation //
-
     @PostMapping("/login")
     public String login(@RequestBody UserCredentials userCredentials) {
+
         String sql = "{call validateUserLogin(?, ?, ?, ?)}";
 
-        try (Connection connection = jdbcTemplate.getDataSource().getConnection();
+        try (Connection connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
              CallableStatement statement = connection.prepareCall(sql)) {
 
             statement.setString(1, userCredentials.getEmail());
@@ -56,7 +68,6 @@ public class UserController {
             return String.valueOf(createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An error occurred while processing the request"));
         }
     }
-
 
     private ResponseEntity<List<Map<String, Object>>> createErrorResponse(HttpStatus httpStatus, String message) {
         Map<String, Object> errorResponse = new HashMap<>();
